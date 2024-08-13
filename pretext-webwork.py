@@ -1,36 +1,38 @@
-# read a ptx file (which is basically xml)
-# grab out anything that looks like <webwork source="..." />
 import xml.etree.ElementTree as ET
-tree = ET.parse("S-mv-fns-functions.ptx")
-root = tree.getroot()
-exercises = tree.find("exercises")
-print(exercises)
-for webwork in exercises.iterfind("webwork"):
-    print("hi")
-    source = webwork.get("source")
-    print(webwork)
 
-# write out like this:
-# assignmentType      = default
-# openDate          = 08/20/2024 at 11:59pm MDT
-# reducedScoringDate = 12/31/1969 at 05:00pm MST
-# dueDate           = 08/27/2024 at 11:59pm MDT
-# answerDate        = 08/29/2024 at 11:59pm MDT
-# enableReducedScoring = N
-# paperHeaderFile   = defaultHeader
-# screenHeaderFile  = defaultHeader
-# description       = 
-# restrictProbProgression = 0
-# emailInstructor   = 0
+# figure out what time it is
+from datetime import datetime, timezone
+nowstr = datetime.now(timezone.utc).strftime("%m/%d/%Y at %I:%M UTC")
 
-# problemListV2
-# problem_start
-# problem_id = 1 <- this is a counter
-# source_file = Library/WHFreeman/Rogawski_Calculus_Early_Transcendentals_Second_Edition/14_Differentiation_in_Several_Variables/14.1_Functions_of_Two_or_More_Variables/14.1.1.pg
-# value = 1
-# max_attempts = -1
-# showMeAnother = -1
-# prPeriod = -1
-# counts_parent_grade = 0
-# att_to_open_children = 0 
-# problem_end
+# find all the .ptx files in the current directory
+import glob
+for ptx in glob.glob("*.ptx"):
+    # start making the def file
+    # these seem to be the only set info that are strictly required
+    buffer = []
+    buffer.append("assignmentType = default")
+    buffer.append("openDate = " + nowstr)
+    buffer.append("dueDate = " + nowstr)
+    buffer.append("answerDate = " + nowstr)
+
+    buffer.append("problemListV2")
+    # read the supplied ptx file (basically xml)
+    tree = ET.parse(ptx)
+    root = tree.getroot()
+    # find the webwork elements
+    webworks = root.iter('webwork')
+    # check if there's no webworks
+    if all(webworks):
+        break
+    for webwork in webworks:
+        buffer.append("problem_start")
+        buffer.append("source_file = " + webwork.get("source"))
+        buffer.append("problem_end")
+    # filename of def file matches ptx file
+    outfile = ptx[:-3]+"def"
+    f = open(outfile, 'w')
+    f.writelines("\n".join(buffer))
+    f.close()
+    buffer.clear()
+
+print("Please remember to rename your .def files starting with 'set'!")
